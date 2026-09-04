@@ -49,15 +49,23 @@ async function decryptBytes(buf, password) {
 }
 
 function saveKey(password) {
-  try { localStorage.setItem(STORAGE_KEY, password); } catch (e) {}
+  try {
+    localStorage.setItem(STORAGE_KEY, password);
+  } catch (e) {}
 }
 
 function loadSavedKey() {
-  try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    return null;
+  }
 }
 
 function clearSavedKey() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {}
 }
 
 async function fetchAndDecrypt(path) {
@@ -90,41 +98,51 @@ function promptForKey(message = "Введите ключ доступа") {
     if (existing) existing.remove();
 
     const overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;";
+    overlay.className = "wiki-key-modal-overlay";
     overlay.id = "wiki-key-modal";
+    overlay.setAttribute("role", "presentation");
 
     const box = document.createElement("div");
-    box.style.cssText =
-      "background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:380px;text-align:center;color:#e0e0e0;font-family:system-ui,sans-serif;";
+    box.className = "wiki-key-dialog";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-labelledby", "wiki-key-title");
 
-    const label = document.createElement("p");
-    label.style.cssText = "margin-bottom:0.5rem;color:#aaa;font-size:0.9rem;";
-    label.textContent = "Студентс Инфо";
+    const logo = document.createElement("div");
+    logo.className = "wiki-key-logo";
+    logo.innerHTML =
+      '<div class="mw-logo-mark" aria-hidden="true"><span class="globe-line globe-line-a"></span><span class="globe-line globe-line-b"></span><span class="globe-line globe-line-c"></span><b>W</b></div><div class="mw-logo-copy"><span class="mw-wordmark">Студентс Инфо</span><span class="mw-tagline">Лор Специалитета</span></div>';
+
+    const label = document.createElement("h1");
+    label.id = "wiki-key-title";
+    label.className = "wiki-key-title";
+    label.textContent = "Введите ключ доступа";
 
     const msg = document.createElement("p");
-    msg.style.cssText = "margin-bottom:1rem;font-size:1rem;color:#fff;";
     msg.textContent = message;
 
     const input = document.createElement("input");
     input.type = "password";
     input.placeholder = "Ключ доступа...";
-    input.style.cssText =
-      "width:100%;padding:0.75rem 1rem;border:1px solid #444;border-radius:8px;background:#0f0f0f;color:#fff;font-size:1rem;margin-bottom:0.75rem;outline:none;box-sizing:border-box;";
+    input.className = "wiki-key-input";
+    input.setAttribute("aria-label", "Ключ доступа");
 
     const err = document.createElement("div");
-    err.style.cssText = "color:#ff6b6b;font-size:0.85rem;min-height:1.2em;margin-bottom:0.5rem;";
+    err.className = "wiki-key-error";
+    err.setAttribute("aria-live", "polite");
 
     const btn = document.createElement("button");
     btn.textContent = "Открыть";
-    btn.style.cssText =
-      "width:100%;padding:0.75rem;border:none;border-radius:8px;background:#6c63ff;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;";
+    btn.className = "wiki-key-submit";
 
     let submitted = false;
     const submit = () => {
       if (submitted) return;
       const val = input.value;
-      if (!val) { err.textContent = "Введите ключ"; return; }
+      if (!val) {
+        err.textContent = "Введите ключ";
+        return;
+      }
       submitted = true;
       overlay.remove();
       resolve(val);
@@ -133,12 +151,19 @@ function promptForKey(message = "Введите ключ доступа") {
     btn.onclick = submit;
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") submit();
-      if (e.key === "Escape") { overlay.remove(); resolve(null); }
+      if (e.key === "Escape") {
+        overlay.remove();
+        resolve(null);
+      }
     });
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) { overlay.remove(); resolve(null); }
+      if (e.target === overlay) {
+        overlay.remove();
+        resolve(null);
+      }
     });
 
+    box.appendChild(logo);
     box.appendChild(label);
     box.appendChild(msg);
     box.appendChild(input);
@@ -490,7 +515,10 @@ function renderArticleList(items) {
 
 function stripLegacyInlineToc(container) {
   const headings = [...container.querySelectorAll("h2")];
-  const tocHeading = headings.find((h) => h.textContent.trim().replace(/^#\s*/, "").toLowerCase() === "содержание");
+  const tocHeading = headings.find(
+    (h) =>
+      h.textContent.trim().replace(/^#\s*/, "").toLowerCase() === "содержание",
+  );
   if (!tocHeading) return;
 
   let node = tocHeading.nextElementSibling;
@@ -507,7 +535,10 @@ function buildToc(container) {
   const headings = [...container.querySelectorAll("h2, h3, h4, h5, h6")];
 
   if (!headings.length) {
-    toc.insertAdjacentHTML("beforeend", '<span class="sidebar-hint">В статье нет разделов</span>');
+    toc.insertAdjacentHTML(
+      "beforeend",
+      '<span class="sidebar-hint">В статье нет разделов</span>',
+    );
     return;
   }
 
@@ -531,15 +562,20 @@ function setupScrollSpy(headings) {
   if (tocObserver) tocObserver.disconnect();
   const links = [...toc.querySelectorAll(".toc-link")];
   const setActive = (id) => {
-    links.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${id}`));
+    links.forEach((link) =>
+      link.classList.toggle("active", link.getAttribute("href") === `#${id}`),
+    );
   };
 
-  tocObserver = new IntersectionObserver((entries) => {
-    const visible = entries
-      .filter((entry) => entry.isIntersecting)
-      .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-    if (visible[0]) setActive(visible[0].target.id);
-  }, { rootMargin: "-8% 0px -78% 0px", threshold: [0, 1] });
+  tocObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActive(visible[0].target.id);
+    },
+    { rootMargin: "-8% 0px -78% 0px", threshold: [0, 1] },
+  );
 
   headings.forEach((heading) => tocObserver.observe(heading));
 }
@@ -580,7 +616,9 @@ async function loadArticle(path) {
     parsed.innerHTML = parseMarkdown(markdown);
 
     const firstH1 = parsed.querySelector("h1");
-    const title = (firstH1?.textContent || metadata?.title || "Статья").replace(/^#\s*/, "").trim();
+    const title = (firstH1?.textContent || metadata?.title || "Статья")
+      .replace(/^#\s*/, "")
+      .trim();
     if (firstH1) firstH1.remove();
     stripLegacyInlineToc(parsed);
 
@@ -599,15 +637,19 @@ function showHome() {
   document.title = "Студентс Инфо";
   pageContent.innerHTML = articleShell(
     "Студентс Инфо",
-    '<p><b>Добро пожаловать в Студентс Инфо.</b> Выберите статью в меню слева или воспользуйтесь поиском.</p>'
+    "<p><b>Добро пожаловать в Студентс Инфо.</b> Выберите статью в меню слева или воспользуйтесь поиском.</p>",
   );
-  toc.innerHTML = '<a href="#top" class="toc-link toc-root active">Начало</a><span class="sidebar-hint">Откройте статью</span>';
+  toc.innerHTML =
+    '<a href="#top" class="toc-link toc-root active">Начало</a><span class="sidebar-hint">Откройте статью</span>';
   renderArticleList(articleIndex);
 }
 
 function showError(message) {
   document.title = "Ошибка — Студентс Инфо";
-  pageContent.innerHTML = articleShell("Ошибка", `<p>${escapeHtml(message)}</p>`);
+  pageContent.innerHTML = articleShell(
+    "Ошибка",
+    `<p>${escapeHtml(message)}</p>`,
+  );
   toc.innerHTML = '<a href="#top" class="toc-link toc-root active">Начало</a>';
 }
 
@@ -633,7 +675,8 @@ function showSearchSuggestions(query) {
   searchResults.innerHTML = "";
 
   if (!matches.length) {
-    searchResults.innerHTML = '<span class="search-result"><span class="search-result-title">Ничего не найдено</span></span>';
+    searchResults.innerHTML =
+      '<span class="search-result"><span class="search-result-title">Ничего не найдено</span></span>';
   } else {
     matches.forEach((item) => {
       const link = document.createElement("a");
@@ -692,7 +735,9 @@ menuButton.addEventListener("click", () => {
 });
 
 overlay.addEventListener("click", closeMobileMenu);
-hideTocButton?.addEventListener("click", () => document.body.classList.add("toc-hidden"));
+hideTocButton?.addEventListener("click", () =>
+  document.body.classList.add("toc-hidden"),
+);
 
 window.addEventListener("resize", () => {
   if (window.innerWidth > 1000) closeMobileMenu();
@@ -706,7 +751,9 @@ searchForm.addEventListener("submit", (event) => {
   if (matches[0]) navigateToArticle(matches[0].path);
 });
 
-searchInput.addEventListener("input", () => showSearchSuggestions(searchInput.value));
+searchInput.addEventListener("input", () =>
+  showSearchSuggestions(searchInput.value),
+);
 searchInput.addEventListener("focus", () => {
   if (searchInput.value.trim()) showSearchSuggestions(searchInput.value);
 });

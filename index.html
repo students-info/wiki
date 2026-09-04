@@ -1,424 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wiki</title>
-<style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f0f;color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
-  h1{font-size:1.8rem;margin-bottom:0.5rem;color:#fff}
-  .subtitle{color:#888;margin-bottom:2rem;font-size:0.9rem}
-  .lock-icon{font-size:3rem;margin-bottom:1rem}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Студентс Инфо</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="mw-header">
+      <div class="mw-header-left">
+        <button
+          class="icon-button menu-button"
+          id="menuButton"
+          aria-label="Главное меню"
+          title="Главное меню"
+        >
+          <span></span><span></span><span></span>
+        </button>
 
-  .auth{background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:2rem;width:100%;max-width:420px;text-align:center}
-  .auth label{display:block;margin-bottom:0.5rem;color:#aaa;font-size:0.9rem}
-  .auth input{width:100%;padding:0.75rem 1rem;border:1px solid #444;border-radius:8px;background:#0f0f0f;color:#fff;font-size:1rem;margin-bottom:1rem;outline:none;transition:border-color 0.2s}
-  .auth input:focus{border-color:#6c63ff}
-  .auth button{width:100%;padding:0.75rem;border:none;border-radius:8px;background:#6c63ff;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:background 0.2s}
-  .auth button:hover{background:#5a52d5}
-  .auth button:disabled{background:#444;cursor:not-allowed}
-  .error{color:#ff6b6b;margin-top:0.5rem;font-size:0.85rem;min-height:1.2em}
-  .status{color:#888;margin-top:0.5rem;font-size:0.8rem;min-height:1em}
+        <a href="./" class="mw-logo" aria-label="Студентс Инфо — главная">
+          <div class="mw-logo-mark" aria-hidden="true">
+            <span class="globe-line globe-line-a"></span>
+            <span class="globe-line globe-line-b"></span>
+            <span class="globe-line globe-line-c"></span>
+            <b>W</b>
+          </div>
+          <div class="mw-logo-copy">
+            <span class="mw-wordmark">Студентс Инфо</span>
+            <span class="mw-tagline">Лор Специалитета</span>
+          </div>
+        </a>
+      </div>
 
-  .files{width:100%;max-width:760px}
-  .tree{display:flex;flex-direction:column;gap:0.25rem;margin-top:1rem}
-  .tree-node{}
-  .tree-children{margin-left:1.4rem;border-left:1px dashed #333;padding-left:0.6rem;display:flex;flex-direction:column;gap:0.25rem}
-  .tree-children.collapsed{display:none}
-  .tree-item{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:0.6rem 1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;user-select:none}
-  .tree-item:hover{border-color:#6c63ff;background:#1e1e3a}
-  .tree-item.dir{cursor:pointer}
-  .tree-item.file{cursor:pointer}
-  .tree-item .icon{width:1.4rem;flex-shrink:0;color:#888}
-  .tree-item.dir .icon{color:#f5a623}
-  .node-name{font-weight:500;color:#ddd;word-break:break-all;flex:1}
-  .node-meta{font-size:0.8rem;color:#666;margin-top:0.1rem}
-  .node-badge{font-size:0.7rem;background:#6c63ff33;color:#8b83ff;padding:2px 8px;border-radius:4px;white-space:nowrap;margin-left:0.75rem;flex-shrink:0}
-  .file-locked{font-size:0.8rem;color:#666;margin-left:0.75rem;flex-shrink:0}
-  .tree-item.file.locked{cursor:pointer}
+      <div class="mw-header-search">
+        <form class="search" id="searchForm" role="search">
+          <span class="search-icon" aria-hidden="true"></span>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Поиск в Студентс Инфо"
+            autocomplete="off"
+          />
+          <button type="submit">Найти</button>
+          <div class="search-results" id="searchResults" hidden></div>
+        </form>
+      </div>
+    </header>
 
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;z-index:100;padding:1rem}
-  .modal{background:#1a1a2e;border:1px solid #333;border-radius:12px;width:100%;max-width:800px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
-  .modal-header{padding:1rem 1.25rem;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}
-  .modal-header h3{color:#fff;font-size:1rem;word-break:break-all}
-  .modal-close{background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;padding:0 0.25rem;line-height:1}
-  .modal-close:hover{color:#fff}
-  .modal-body{padding:1.25rem;overflow:auto;flex:1}
-  .modal-body img{max-width:100%;border-radius:8px}
-  .modal-body pre{background:#0f0f0f;padding:1rem;border-radius:8px;overflow-x:auto;font-size:0.85rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-  .modal-body video,.modal-body audio{width:100%;border-radius:8px}
-  .modal-body iframe{width:100%;height:70vh;border:none;border-radius:8px}
-  .decrypting{text-align:center;padding:3rem;color:#888}
-  .spinner{display:inline-block;width:24px;height:24px;border:3px solid #333;border-top-color:#6c63ff;border-radius:50%;animation:spin 0.6s linear infinite;margin-bottom:0.75rem}
-  @keyframes spin{to{transform:rotate(360deg)}}
+    <div class="site-frame">
+      <aside class="left-rail" id="sidebar">
+        <div class="left-rail-inner">
+          <div class="rail-section">
+            <div class="rail-heading-row">
+              <h2>Содержание</h2>
+              <button class="rail-collapse" id="hideTocButton" type="button">
+                скрыть
+              </button>
+            </div>
+            <nav class="toc" id="toc" aria-label="Содержание статьи">
+              <a href="#top" class="toc-link toc-root active">Начало</a>
+              <span class="sidebar-hint">Откройте статью</span>
+            </nav>
+          </div>
 
-  .hidden{display:none!important}
+          <div class="rail-section article-browser" id="articleBrowser">
+            <div class="rail-heading-row">
+              <h2>Статьи</h2>
+            </div>
+            <nav id="articleList" class="article-list">
+              <span class="sidebar-hint">Статьи появятся здесь</span>
+            </nav>
+          </div>
+        </div>
+      </aside>
 
-  .download-btn{display:inline-block;margin-top:1rem;padding:0.5rem 1rem;background:#6c63ff;color:#fff;border-radius:6px;text-decoration:none;font-size:0.85rem;cursor:pointer;border:none;transition:background 0.2s}
-  .download-btn:hover{background:#5a52d5}
-</style>
-</head>
-<body>
+      <main class="article-column" id="top">
+        <article class="page" id="pageContent">
+          <div class="article-heading">
+            <h1>Студентс Инфо</h1>
+          </div>
+          <div class="article-toolbar">
+            <div class="tabs tabs-left">
+              <a class="tab active" href="#">Статья</a>
+            </div>
+          </div>
+          <div class="markdown-body welcome-copy">
+            <p>
+              <b>Добро пожаловать в Студентс Инфо.</b> Выберите статью в меню
+              слева или воспользуйтесь поиском.
+            </p>
+          </div>
+        </article>
 
-<div class="lock-icon">&#128274;</div>
-<h1>Wiki</h1>
-<p class="subtitle">Структура разделов открыта. Для просмотра содержимого введите ключ.</p>
+        <footer class="footer">
+          <p>
+            Текст доступен в соответствии с правилами проекта; могут применяться
+            дополнительные условия.
+          </p>
+        </footer>
+      </main>
 
-<div class="auth" id="auth">
-  <label for="password">Ключ доступа</label>
-  <input type="password" id="password" placeholder="Enter decryption key..." autocomplete="off">
-  <button id="unlock-btn" onclick="unlock()">Проверить и открыть</button>
-  <button id="clear-btn" onclick="clearKey()" style="margin-top:0.5rem;background:none;border:1px solid #444;color:#aaa">Сбросить сохранённый ключ</button>
-  <div class="status" id="status"></div>
-  <div class="error" id="error"></div>
-</div>
+      <aside class="right-rail" id="appearanceRail">
+        <div class="appearance-card">
+          <h2>Внешний вид</h2>
+          <div class="appearance-divider"></div>
 
-<div class="files" id="files-section">
-  <div class="tree" id="tree-root"></div>
-</div>
+          <fieldset>
+            <legend>Текст</legend>
+            <div class="segmented" id="fontSizeControl">
+              <button type="button" data-font="small">Мелкий</button>
+              <button type="button" data-font="standard" class="selected">
+                Стандартный
+              </button>
+              <button type="button" data-font="large">Крупный</button>
+            </div>
+          </fieldset>
 
-<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h3 id="modal-title">File</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+          <fieldset>
+            <legend>Цвет</legend>
+            <label
+              ><input type="radio" name="theme" value="auto" checked />
+              Автоматически</label
+            >
+            <label
+              ><input type="radio" name="theme" value="light" /> Светлый</label
+            >
+            <label
+              ><input type="radio" name="theme" value="dark" /> Тёмный</label
+            >
+          </fieldset>
+        </div>
+      </aside>
     </div>
-    <div class="modal-body" id="modal-body"></div>
-  </div>
-</div>
 
-<script>
-const PBKDF2_ITERATIONS = 600000;
-const SALT_LEN = 16;
-const IV_LEN = 12;
-const TAG_LEN = 16;
-const ALGO = "AES-GCM";
-
-let manifest = [];
-let derivedKey = null;
-
-async function deriveKey(password, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]
-  );
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-512" },
-    keyMaterial,
-    { name: ALGO, length: 256 },
-    false,
-    ["decrypt"]
-  );
-}
-
-async function decryptBytes(buf, password) {
-  const bytes = new Uint8Array(buf);
-  const salt = bytes.slice(0, SALT_LEN);
-  const iv = bytes.slice(SALT_LEN, SALT_LEN + IV_LEN);
-  const data = bytes.slice(SALT_LEN + IV_LEN, bytes.length - TAG_LEN);
-  const tag = bytes.slice(bytes.length - TAG_LEN);
-  const encrypted = new Uint8Array(data.length + tag.length);
-  encrypted.set(data, 0);
-  encrypted.set(tag, data.length);
-  const key = await deriveKey(password, salt);
-  return crypto.subtle.decrypt({ name: ALGO, iv }, key, encrypted);
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / 1048576).toFixed(1) + " MB";
-}
-
-function collectFiles(nodes) {
-  let out = [];
-  for (const n of nodes) {
-    if (n.type === "dir") out = out.concat(collectFiles(n.children || []));
-    else if (n.type === "file") out.push(n);
-  }
-  return out;
-}
-
-function findFirstFile(nodes) {
-  for (const n of nodes) {
-    if (n.type === "file") return n;
-    const f = findFirstFile(n.children || []);
-    if (f) return f;
-  }
-  return null;
-}
-
-async function verifyKey(password) {
-  const first = findFirstFile(manifest);
-  if (!first) throw new Error("manifest is empty");
-  const res = await fetch("encrypted/" + first.file);
-  const buf = await res.arrayBuffer();
-  await decryptBytes(buf, password);
-}
-
-const STORAGE_KEY = "wiki_key";
-
-function saveKey(password) {
-  try { localStorage.setItem(STORAGE_KEY, password); } catch (e) {}
-}
-
-function loadSavedKey() {
-  try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
-}
-
-function clearSavedKey() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-}
-
-function clearKey() {
-  clearSavedKey();
-  derivedKey = null;
-  document.getElementById("status").textContent = "Ключ сброшен.";
-  document.getElementById("error").textContent = "";
-  document.getElementById("password").value = "";
-}
-
-async function unlock() {
-  const pwd = document.getElementById("password").value;
-  const errEl = document.getElementById("error");
-  const statusEl = document.getElementById("status");
-  const btn = document.getElementById("unlock-btn");
-
-  if (!pwd) { errEl.textContent = "Введите ключ"; return; }
-
-  errEl.textContent = "";
-  statusEl.textContent = "Проверка ключа...";
-  btn.disabled = true;
-
-  try {
-    await verifyKey(pwd);
-    derivedKey = pwd;
-    saveKey(pwd);
-    statusEl.textContent = "\u2713 Ключ верный. Откройте файл.";
-    errEl.textContent = "";
-    document.getElementById("password").value = "";
-  } catch (e) {
-    errEl.textContent = "Неверный ключ";
-    statusEl.textContent = "";
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-document.getElementById("password").addEventListener("keydown", e => {
-  if (e.key === "Enter") unlock();
-});
-
-function renderNode(node) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "tree-node";
-
-  const entry = document.createElement("div");
-  entry.className = "tree-item " + (node.type === "dir" ? "dir" : "file");
-
-  const icon = document.createElement("span");
-  icon.className = "icon";
-  icon.textContent = node.type === "dir" ? "\u25B8" : "\uD83D\uDCC4";
-
-  const nameDiv = document.createElement("div");
-  nameDiv.style.flex = "1";
-  const nameSpan = document.createElement("div");
-  nameSpan.className = "node-name";
-  nameSpan.textContent = node.name;
-  nameDiv.appendChild(nameSpan);
-
-  if (node.type === "file") {
-    const meta = document.createElement("div");
-    meta.className = "node-meta";
-    meta.textContent = formatSize(node.size);
-    nameDiv.appendChild(meta);
-  }
-
-  entry.appendChild(icon);
-  entry.appendChild(nameDiv);
-
-  if (node.type === "dir") {
-    entry.appendChild(
-      Object.assign(document.createElement("span"), {
-        className: "node-badge",
-        textContent: "раздел",
-      })
-    );
-    entry.onclick = (e) => {
-      e.stopPropagation();
-      const childBox = wrapper.querySelector(".tree-children");
-      const collapsed = childBox.classList.toggle("collapsed");
-      icon.textContent = collapsed ? "\u25B8" : "\u25BE";
-    };
-  } else {
-    entry.appendChild(
-      Object.assign(document.createElement("span"), {
-        className: "file-locked",
-        textContent: "зашифровано",
-      })
-    );
-    entry.title = "Нажмите, чтобы открыть (требуется ключ)";
-    entry.onclick = (e) => {
-      e.stopPropagation();
-      if (!derivedKey) {
-        promptKey(node);
-        return;
-      }
-      openFile(node);
-    };
-  }
-
-  wrapper.appendChild(entry);
-
-  if (node.type === "dir" && node.children && node.children.length) {
-    const childBox = document.createElement("div");
-    childBox.className = "tree-children";
-    node.children.forEach(c => childBox.appendChild(renderNode(c)));
-    wrapper.appendChild(childBox);
-  }
-
-  return wrapper;
-}
-
-function renderTree() {
-  const root = document.getElementById("tree-root");
-  root.innerHTML = "";
-  if (!manifest.length) {
-    root.appendChild(
-      Object.assign(document.createElement("div"), {
-        className: "subtitle",
-        textContent: "Нет разделов",
-      })
-    );
-    return;
-  }
-  manifest.forEach(n => root.appendChild(renderNode(n)));
-}
-
-async function promptKey(node) {
-  const overlay = document.getElementById("modal-overlay");
-  const title = document.getElementById("modal-title");
-  const body = document.getElementById("modal-body");
-
-  overlay.classList.remove("hidden");
-  title.textContent = node.name;
-  body.innerHTML =
-    '<div style="text-align:center;padding:1rem">' +
-    '<p style="color:#aaa;margin-bottom:1rem">Введите ключ доступа для просмотра</p>' +
-    '<input type="password" id="prompt-pwd" placeholder="Ключ..." style="width:100%;padding:0.75rem;border:1px solid #444;border-radius:8px;background:#0f0f0f;color:#fff;font-size:1rem;margin-bottom:0.75rem;outline:none">' +
-    '<div id="prompt-err" style="color:#ff6b6b;font-size:0.85rem;min-height:1.2em"></div>' +
-    '<button id="prompt-btn" style="width:100%;padding:0.75rem;border:none;border-radius:8px;background:#6c63ff;color:#fff;font-size:1rem;font-weight:600;cursor:pointer">Открыть</button>' +
-    '</div>';
-
-  const pwdInput = document.getElementById("prompt-pwd");
-  const btn = document.getElementById("prompt-btn");
-  const errEl = document.getElementById("prompt-err");
-  pwdInput.focus();
-
-  const doOpen = async () => {
-    const pwd = pwdInput.value;
-    if (!pwd) { errEl.textContent = "Введите ключ"; return; }
-    btn.disabled = true;
-    btn.textContent = "Проверка...";
-    try {
-      await verifyKey(pwd);
-      derivedKey = pwd;
-      saveKey(pwd);
-      await openFile(node, overlay, title, body);
-    } catch (e) {
-      errEl.textContent = "Неверный ключ";
-      btn.disabled = false;
-      btn.textContent = "Открыть";
-    }
-  };
-
-  btn.onclick = doOpen;
-  pwdInput.addEventListener("keydown", e => { if (e.key === "Enter") doOpen(); });
-  pwdInput.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
-}
-
-async function openFile(entry, overlayEl, titleEl, bodyEl) {
-  const overlay = overlayEl || document.getElementById("modal-overlay");
-  const title = titleEl || document.getElementById("modal-title");
-  const body = bodyEl || document.getElementById("modal-body");
-
-  title.textContent = entry.name;
-  body.innerHTML = '<div class="decrypting"><div class="spinner"></div><div>Decrypting...</div></div>';
-
-  try {
-    const res = await fetch("encrypted/" + entry.file);
-    const buf = await res.arrayBuffer();
-    const plain = await decryptBytes(buf, derivedKey);
-    renderContent(body, entry.mime, plain, entry.name);
-  } catch (e) {
-    body.innerHTML = `<p style="color:#ff6b6b">Расшифровка не удалась: ${esc(e.message)}</p>`;
-  }
-}
-
-(async function init() {
-  try {
-    const res = await fetch("encrypted/manifest.json");
-    if (!res.ok) throw new Error("manifest.json not found");
-    manifest = await res.json();
-    renderTree();
-
-    const saved = loadSavedKey();
-    if (saved) {
-      try {
-        await verifyKey(saved);
-        derivedKey = saved;
-        const s = document.getElementById("status");
-        s.textContent = "\u2713 Ключ сохранён: файлы доступны.";
-      } catch (e) {
-        clearSavedKey();
-      }
-    }
-  } catch (e) {
-    const status = document.getElementById("status");
-    status.textContent = "Ошибка загрузки структуры: " + e.message;
-  }
-})();
-
-function renderContent(container, mime, buf, name) {
-  const blob = new Blob([buf], { type: mime });
-  const url = URL.createObjectURL(blob);
-
-  if (mime.startsWith("image/")) {
-    container.innerHTML = `<img src="${url}" alt="${esc(name)}">`;
-  } else if (mime.startsWith("video/")) {
-    container.innerHTML = `<video controls autoplay src="${url}"></video>`;
-  } else if (mime.startsWith("audio/")) {
-    container.innerHTML = `<audio controls autoplay src="${url}"></audio>`;
-  } else if (mime === "application/pdf") {
-    container.innerHTML = `<iframe src="${url}"></iframe>`;
-  } else if (mime.startsWith("text/") || mime === "application/json" || mime === "application/javascript") {
-    const text = new TextDecoder().decode(buf);
-    container.innerHTML = `<pre>${esc(text)}</pre>`;
-  } else {
-    const text = new TextDecoder().decode(buf);
-    container.innerHTML = `<pre>${esc(text)}</pre>`;
-    const dl = document.createElement("button");
-    dl.className = "download-btn";
-    dl.textContent = "Download";
-    dl.onclick = () => {
-      const a = document.createElement("a");
-      a.href = url; a.download = name; a.click();
-    };
-    container.appendChild(dl);
-  }
-}
-
-function closeModal(e) {
-  if (e && e.target !== document.getElementById("modal-overlay")) return;
-  document.getElementById("modal-overlay").classList.add("hidden");
-}
-
-function esc(s) {
-  const d = document.createElement("div");
-  d.textContent = s;
-  return d.innerHTML;
-}
-</script>
-</body>
+    <div class="mobile-overlay" id="overlay"></div>
+    <script src="app.js"></script>
+  </body>
 </html>

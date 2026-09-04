@@ -539,20 +539,35 @@ function buildToc(container) {
       "beforeend",
       '<span class="sidebar-hint">В статье нет разделов</span>',
     );
-    return;
+  } else {
+    headings.forEach((heading) => {
+      if (!heading.id) heading.id = slugify(heading.textContent);
+      const link = document.createElement("a");
+      link.className = `toc-link level-${heading.tagName.slice(1)}`;
+      link.href = `#${heading.id}`;
+      link.textContent = heading.textContent.replace(/^#\s*/, "").trim();
+      toc.appendChild(link);
+    });
   }
 
-  headings.forEach((heading) => {
-    if (!heading.id) heading.id = slugify(heading.textContent);
-    const link = document.createElement("a");
-    link.className = `toc-link level-${heading.tagName.slice(1)}`;
-    link.href = `#${heading.id}`;
-    link.textContent = heading.textContent.replace(/^#\s*/, "").trim();
-    link.addEventListener("click", () => {
-      if (window.innerWidth <= 1000) closeMobileMenu();
-    });
-    toc.appendChild(link);
-  });
+  toc.onclick = (event) => {
+    const link = event.target.closest(".toc-link");
+    if (!link) return;
+
+    event.preventDefault(); 
+    const href = link.getAttribute("href");
+    if (href === "#top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      const targetId = href.replace(/^#/, "");
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    if (window.innerWidth <= 1000) closeMobileMenu();
+  };
 
   setupScrollSpy(headings);
 }
@@ -561,10 +576,16 @@ let tocObserver;
 function setupScrollSpy(headings) {
   if (tocObserver) tocObserver.disconnect();
   const links = [...toc.querySelectorAll(".toc-link")];
+
   const setActive = (id) => {
-    links.forEach((link) =>
-      link.classList.toggle("active", link.getAttribute("href") === `#${id}`),
-    );
+    links.forEach((link) => {
+      const isActive = link.getAttribute("href") === `#${id}`;
+      link.classList.toggle("active", isActive);
+
+      if (isActive && toc.scrollHeight > toc.clientHeight) {
+        link.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
   };
 
   tocObserver = new IntersectionObserver(

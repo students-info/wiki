@@ -106,9 +106,9 @@ async function decryptBytes(buf, password) {
   const iv = bytes.slice(SALT_LEN, SALT_LEN + IV_LEN);
   const data = bytes.slice(SALT_LEN + IV_LEN, bytes.length - TAG_LEN);
   const tag = bytes.slice(bytes.length - TAG_LEN);
-  const encrypted = new Uint8Array(tag.length + data.length);
-  encrypted.set(tag, 0);
-  encrypted.set(data, tag.length);
+  const encrypted = new Uint8Array(data.length + tag.length);
+  encrypted.set(data, 0);
+  encrypted.set(tag, data.length);
   const key = await deriveKey(password, salt);
   return crypto.subtle.decrypt({ name: ALGO, iv }, key, encrypted);
 }

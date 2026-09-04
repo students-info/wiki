@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Студентс Инфо</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="mw-header">
+      <div class="mw-header-left">
+        <button
+          class="icon-button menu-button"
+          id="menuButton"
+          aria-label="Главное меню"
+          title="Главное меню"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <a href="./" class="mw-logo" aria-label="Студентс Инфо — главная">
+          <div class="mw-logo-mark" aria-hidden="true">
+            <span class="globe-line globe-line-a"></span>
+            <span class="globe-line globe-line-b"></span>
+            <span class="globe-line globe-line-c"></span>
+            <b>W</b>
+          </div>
+          <div class="mw-logo-copy">
+            <span class="mw-wordmark">Студентс Инфо</span>
+            <span class="mw-tagline">Лор Специалитета</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="mw-header-search">
+        <form class="search" id="searchForm" role="search">
+          <span class="search-icon" aria-hidden="true"></span>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Поиск в Студентс Инфо"
+            autocomplete="off"
+          />
+          <button type="submit">Найти</button>
+          <div class="search-results" id="searchResults" hidden></div>
+        </form>
+      </div>
+    </header>
+
+    <div class="site-frame">
+      <aside class="left-rail" id="sidebar">
+        <div class="left-rail-inner">
+          <div class="rail-section">
+            <div class="rail-heading-row">
+              <h2>Содержание</h2>
+              <button class="rail-collapse" id="hideTocButton" type="button">
+                скрыть
+              </button>
+            </div>
+            <nav class="toc" id="toc" aria-label="Содержание статьи">
+              <a href="#top" class="toc-link toc-root active">Начало</a>
+              <span class="sidebar-hint">Откройте статью</span>
+            </nav>
+          </div>
+
+          <div class="rail-section article-browser" id="articleBrowser">
+            <div class="rail-heading-row">
+              <h2>Статьи</h2>
+            </div>
+            <nav id="articleList" class="article-list">
+              <span class="sidebar-hint">Статьи появятся здесь</span>
+            </nav>
+          </div>
+        </div>
+      </aside>
+
+      <main class="article-column" id="top">
+        <article class="page" id="pageContent">
+          <div class="article-heading">
+            <h1>Студентс Инфо</h1>
+          </div>
+          <div class="article-toolbar">
+            <div class="tabs tabs-left">
+              <a class="tab active" href="#">Статья</a>
+            </div>
+          </div>
+          <div class="markdown-body welcome-copy">
+            <p>
+              <b>Добро пожаловать в Студентс Инфо.</b> Выберите статью в меню
+              слева или воспользуйтесь поиском.
+            </p>
+          </div>
+        </article>
+
+        <footer class="footer">
+          <p>
+            Текст доступен в соответствии с правилами проекта; могут применяться
+            дополнительные условия.
+          </p>
+        </footer>
+      </main>
+
+      <aside class="right-rail" id="appearanceRail">
+        <div class="appearance-card">
+          <h2>Внешний вид</h2>
+          <div class="appearance-divider"></div>
+
+          <fieldset>
+            <legend>Текст</legend>
+            <div class="segmented" id="fontSizeControl">
+              <button type="button" data-font="small">Мелкий</button>
+              <button type="button" data-font="standard" class="selected">
+                Стандартный
+              </button>
+              <button type="button" data-font="large">Крупный</button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Цвет</legend>
+            <label
+              ><input type="radio" name="theme" value="auto" checked />
+              Автоматически</label
+            >
+            <label
+              ><input type="radio" name="theme" value="light" /> Светлый</label
+            >
+            <label
+              ><input type="radio" name="theme" value="dark" /> Тёмный</label
+            >
+          </fieldset>
+        </div>
+      </aside>
+    </div>
+
+    <div class="mobile-overlay" id="overlay"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

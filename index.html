@@ -19,14 +19,24 @@
   .auth button:hover{background:#5a52d5}
   .auth button:disabled{background:#444;cursor:not-allowed}
   .error{color:#ff6b6b;margin-top:0.5rem;font-size:0.85rem;min-height:1.2em}
+  .status{color:#888;margin-top:0.5rem;font-size:0.8rem;min-height:1em}
 
-  .files{width:100%;max-width:700px}
-  .file-list{list-style:none;display:flex;flex-direction:column;gap:0.5rem}
-  .file-item{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color 0.2s,background 0.2s}
-  .file-item:hover{border-color:#6c63ff;background:#1e1e3a}
-  .file-name{font-weight:500;color:#ddd;word-break:break-all}
-  .file-meta{font-size:0.8rem;color:#666;margin-top:0.25rem}
-  .file-badge{font-size:0.7rem;background:#6c63ff33;color:#8b83ff;padding:2px 8px;border-radius:4px;white-space:nowrap;margin-left:0.75rem;flex-shrink:0}
+  .files{width:100%;max-width:760px}
+  .tree{display:flex;flex-direction:column;gap:0.25rem;margin-top:1rem}
+  .tree-node{}
+  .tree-children{margin-left:1.4rem;border-left:1px dashed #333;padding-left:0.6rem;display:flex;flex-direction:column;gap:0.25rem}
+  .tree-children.collapsed{display:none}
+  .tree-item{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:0.6rem 1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;user-select:none}
+  .tree-item:hover{border-color:#6c63ff;background:#1e1e3a}
+  .tree-item.dir{cursor:pointer}
+  .tree-item.file{cursor:pointer}
+  .tree-item .icon{width:1.4rem;flex-shrink:0;color:#888}
+  .tree-item.dir .icon{color:#f5a623}
+  .node-name{font-weight:500;color:#ddd;word-break:break-all;flex:1}
+  .node-meta{font-size:0.8rem;color:#666;margin-top:0.1rem}
+  .node-badge{font-size:0.7rem;background:#6c63ff33;color:#8b83ff;padding:2px 8px;border-radius:4px;white-space:nowrap;margin-left:0.75rem;flex-shrink:0}
+  .file-locked{font-size:0.8rem;color:#666;margin-left:0.75rem;flex-shrink:0}
+  .tree-item.file.locked{cursor:pointer}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;z-index:100;padding:1rem}
   .modal{background:#1a1a2e;border:1px solid #333;border-radius:12px;width:100%;max-width:800px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
@@ -52,18 +62,20 @@
 <body>
 
 <div class="lock-icon">&#128274;</div>
-<h1>Encrypted Files</h1>
-<p class="subtitle">Enter the decryption key to access files</p>
+<h1>Wiki</h1>
+<p class="subtitle">Структура разделов открыта. Для просмотра содержимого введите ключ.</p>
 
 <div class="auth" id="auth">
-  <label for="password">Decryption Key</label>
-  <input type="password" id="password" placeholder="Enter key..." autocomplete="off">
-  <button id="unlock-btn" onclick="unlock()">Unlock</button>
+  <label for="password">Ключ доступа</label>
+  <input type="password" id="password" placeholder="Enter decryption key..." autocomplete="off">
+  <button id="unlock-btn" onclick="unlock()">Проверить и открыть</button>
+  <button id="clear-btn" onclick="clearKey()" style="margin-top:0.5rem;background:none;border:1px solid #444;color:#aaa">Сбросить сохранённый ключ</button>
+  <div class="status" id="status"></div>
   <div class="error" id="error"></div>
 </div>
 
-<div class="files hidden" id="files-section">
-  <ul class="file-list" id="file-list"></ul>
+<div class="files" id="files-section">
+  <div class="tree" id="tree-root"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
@@ -119,74 +131,218 @@ function formatSize(bytes) {
   return (bytes / 1048576).toFixed(1) + " MB";
 }
 
+function collectFiles(nodes) {
+  let out = [];
+  for (const n of nodes) {
+    if (n.type === "dir") out = out.concat(collectFiles(n.children || []));
+    else if (n.type === "file") out.push(n);
+  }
+  return out;
+}
+
+function findFirstFile(nodes) {
+  for (const n of nodes) {
+    if (n.type === "file") return n;
+    const f = findFirstFile(n.children || []);
+    if (f) return f;
+  }
+  return null;
+}
+
+async function verifyKey(password) {
+  const first = findFirstFile(manifest);
+  if (!first) throw new Error("manifest is empty");
+  const res = await fetch("encrypted/" + first.file);
+  const buf = await res.arrayBuffer();
+  await decryptBytes(buf, password);
+}
+
+const STORAGE_KEY = "wiki_key";
+
+function saveKey(password) {
+  try { localStorage.setItem(STORAGE_KEY, password); } catch (e) {}
+}
+
+function loadSavedKey() {
+  try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+}
+
+function clearSavedKey() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
+function clearKey() {
+  clearSavedKey();
+  derivedKey = null;
+  document.getElementById("status").textContent = "Ключ сброшен.";
+  document.getElementById("error").textContent = "";
+  document.getElementById("password").value = "";
+}
+
 async function unlock() {
   const pwd = document.getElementById("password").value;
   const errEl = document.getElementById("error");
+  const statusEl = document.getElementById("status");
   const btn = document.getElementById("unlock-btn");
 
-  if (!pwd) { errEl.textContent = "Enter a key"; return; }
+  if (!pwd) { errEl.textContent = "Введите ключ"; return; }
 
-  errEl.textContent = "Loading manifest...";
+  errEl.textContent = "";
+  statusEl.textContent = "Проверка ключа...";
   btn.disabled = true;
 
   try {
-    const res = await fetch("encrypted/manifest.json");
-    if (!res.ok) throw new Error("manifest.json not found");
-    manifest = await res.json();
-  } catch (e) {
-    errEl.textContent = "Failed to load manifest.json: " + e.message;
-    btn.disabled = false;
-    return;
-  }
-
-  errEl.textContent = "Verifying key...";
-
-  try {
-    const test = manifest[0];
-    if (!test) { errEl.textContent = "Manifest is empty"; btn.disabled = false; return; }
-    const res = await fetch("encrypted/" + test.file);
-    const buf = await res.arrayBuffer();
-    await decryptBytes(buf, pwd);
+    await verifyKey(pwd);
     derivedKey = pwd;
+    saveKey(pwd);
+    statusEl.textContent = "\u2713 Ключ верный. Откройте файл.";
+    errEl.textContent = "";
+    document.getElementById("password").value = "";
   } catch (e) {
-    errEl.textContent = "Wrong key or corrupted data";
+    errEl.textContent = "Неверный ключ";
+    statusEl.textContent = "";
+  } finally {
     btn.disabled = false;
-    return;
   }
-
-  document.getElementById("auth").classList.add("hidden");
-  document.getElementById("files-section").classList.remove("hidden");
-  renderFiles();
 }
 
 document.getElementById("password").addEventListener("keydown", e => {
   if (e.key === "Enter") unlock();
 });
 
-function renderFiles() {
-  const list = document.getElementById("file-list");
-  list.innerHTML = "";
-  for (const f of manifest) {
-    const li = document.createElement("li");
-    li.className = "file-item";
-    li.innerHTML = `
-      <div>
-        <div class="file-name">${esc(f.name)}</div>
-        <div class="file-meta">${formatSize(f.size)}</div>
-      </div>
-      <span class="file-badge">${esc(f.mime.split("/").pop())}</span>
-    `;
-    li.onclick = () => openFile(f);
-    list.appendChild(li);
+function renderNode(node) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "tree-node";
+
+  const entry = document.createElement("div");
+  entry.className = "tree-item " + (node.type === "dir" ? "dir" : "file");
+
+  const icon = document.createElement("span");
+  icon.className = "icon";
+  icon.textContent = node.type === "dir" ? "\u25B8" : "\uD83D\uDCC4";
+
+  const nameDiv = document.createElement("div");
+  nameDiv.style.flex = "1";
+  const nameSpan = document.createElement("div");
+  nameSpan.className = "node-name";
+  nameSpan.textContent = node.name;
+  nameDiv.appendChild(nameSpan);
+
+  if (node.type === "file") {
+    const meta = document.createElement("div");
+    meta.className = "node-meta";
+    meta.textContent = formatSize(node.size);
+    nameDiv.appendChild(meta);
   }
+
+  entry.appendChild(icon);
+  entry.appendChild(nameDiv);
+
+  if (node.type === "dir") {
+    entry.appendChild(
+      Object.assign(document.createElement("span"), {
+        className: "node-badge",
+        textContent: "раздел",
+      })
+    );
+    entry.onclick = (e) => {
+      e.stopPropagation();
+      const childBox = wrapper.querySelector(".tree-children");
+      const collapsed = childBox.classList.toggle("collapsed");
+      icon.textContent = collapsed ? "\u25B8" : "\u25BE";
+    };
+  } else {
+    entry.appendChild(
+      Object.assign(document.createElement("span"), {
+        className: "file-locked",
+        textContent: "зашифровано",
+      })
+    );
+    entry.title = "Нажмите, чтобы открыть (требуется ключ)";
+    entry.onclick = (e) => {
+      e.stopPropagation();
+      if (!derivedKey) {
+        promptKey(node);
+        return;
+      }
+      openFile(node);
+    };
+  }
+
+  wrapper.appendChild(entry);
+
+  if (node.type === "dir" && node.children && node.children.length) {
+    const childBox = document.createElement("div");
+    childBox.className = "tree-children";
+    node.children.forEach(c => childBox.appendChild(renderNode(c)));
+    wrapper.appendChild(childBox);
+  }
+
+  return wrapper;
 }
 
-async function openFile(entry) {
+function renderTree() {
+  const root = document.getElementById("tree-root");
+  root.innerHTML = "";
+  if (!manifest.length) {
+    root.appendChild(
+      Object.assign(document.createElement("div"), {
+        className: "subtitle",
+        textContent: "Нет разделов",
+      })
+    );
+    return;
+  }
+  manifest.forEach(n => root.appendChild(renderNode(n)));
+}
+
+async function promptKey(node) {
   const overlay = document.getElementById("modal-overlay");
   const title = document.getElementById("modal-title");
   const body = document.getElementById("modal-body");
 
   overlay.classList.remove("hidden");
+  title.textContent = node.name;
+  body.innerHTML =
+    '<div style="text-align:center;padding:1rem">' +
+    '<p style="color:#aaa;margin-bottom:1rem">Введите ключ доступа для просмотра</p>' +
+    '<input type="password" id="prompt-pwd" placeholder="Ключ..." style="width:100%;padding:0.75rem;border:1px solid #444;border-radius:8px;background:#0f0f0f;color:#fff;font-size:1rem;margin-bottom:0.75rem;outline:none">' +
+    '<div id="prompt-err" style="color:#ff6b6b;font-size:0.85rem;min-height:1.2em"></div>' +
+    '<button id="prompt-btn" style="width:100%;padding:0.75rem;border:none;border-radius:8px;background:#6c63ff;color:#fff;font-size:1rem;font-weight:600;cursor:pointer">Открыть</button>' +
+    '</div>';
+
+  const pwdInput = document.getElementById("prompt-pwd");
+  const btn = document.getElementById("prompt-btn");
+  const errEl = document.getElementById("prompt-err");
+  pwdInput.focus();
+
+  const doOpen = async () => {
+    const pwd = pwdInput.value;
+    if (!pwd) { errEl.textContent = "Введите ключ"; return; }
+    btn.disabled = true;
+    btn.textContent = "Проверка...";
+    try {
+      await verifyKey(pwd);
+      derivedKey = pwd;
+      saveKey(pwd);
+      await openFile(node, overlay, title, body);
+    } catch (e) {
+      errEl.textContent = "Неверный ключ";
+      btn.disabled = false;
+      btn.textContent = "Открыть";
+    }
+  };
+
+  btn.onclick = doOpen;
+  pwdInput.addEventListener("keydown", e => { if (e.key === "Enter") doOpen(); });
+  pwdInput.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+}
+
+async function openFile(entry, overlayEl, titleEl, bodyEl) {
+  const overlay = overlayEl || document.getElementById("modal-overlay");
+  const title = titleEl || document.getElementById("modal-title");
+  const body = bodyEl || document.getElementById("modal-body");
+
   title.textContent = entry.name;
   body.innerHTML = '<div class="decrypting"><div class="spinner"></div><div>Decrypting...</div></div>';
 
@@ -196,9 +352,33 @@ async function openFile(entry) {
     const plain = await decryptBytes(buf, derivedKey);
     renderContent(body, entry.mime, plain, entry.name);
   } catch (e) {
-    body.innerHTML = `<p style="color:#ff6b6b">Decryption failed: ${esc(e.message)}</p>`;
+    body.innerHTML = `<p style="color:#ff6b6b">Расшифровка не удалась: ${esc(e.message)}</p>`;
   }
 }
+
+(async function init() {
+  try {
+    const res = await fetch("encrypted/manifest.json");
+    if (!res.ok) throw new Error("manifest.json not found");
+    manifest = await res.json();
+    renderTree();
+
+    const saved = loadSavedKey();
+    if (saved) {
+      try {
+        await verifyKey(saved);
+        derivedKey = saved;
+        const s = document.getElementById("status");
+        s.textContent = "\u2713 Ключ сохранён: файлы доступны.";
+      } catch (e) {
+        clearSavedKey();
+      }
+    }
+  } catch (e) {
+    const status = document.getElementById("status");
+    status.textContent = "Ошибка загрузки структуры: " + e.message;
+  }
+})();
 
 function renderContent(container, mime, buf, name) {
   const blob = new Blob([buf], { type: mime });

@@ -1,0 +1,58 @@
+name: Encrypt & Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "content/**"
+
+concurrency:
+  group: encrypt-deploy
+  cancel-in-progress: false
+
+jobs:
+  encrypt-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cryptography
+        run: pip install cryptography
+
+      - name: Create .env from secret
+        run: |
+          echo "WIKI_PASSWORD=${{ secrets.WIKI_PASSWORD }}" > .env
+
+      - name: Encrypt content -> encrypted
+        run: |
+          set -e
+          source .env
+          python encrypt.py "$WIKI_PASSWORD" content encrypted
+        shell: bash
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push
+        run: |
+          rm -f .env
+          git add index.html encrypted encrypt.py .gitignore
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "ci: encrypt content and update site"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:"${GITHUB_REF_NAME}"
+        shell: bash

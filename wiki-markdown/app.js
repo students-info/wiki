@@ -407,10 +407,6 @@ function setupScrollSpy(headings) {
 
 function articleShell(title, bodyHtml) {
   return `
-    <div class="article-heading">
-      <h1>${escapeHtml(title)}</h1>
-      <button class="language-button" type="button">文&nbsp;&nbsp;Языки</button>
-    </div>
     <div class="article-toolbar">
       <div class="tabs tabs-left">
         <a class="tab active" href="#">Статья</a>

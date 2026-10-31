@@ -92,7 +92,9 @@ async function fetchAndDecrypt(path) {
   }
 }
 
-function promptForKey(message = "Для просмотра защищённых материалов введите ключ.") {
+function promptForKey(
+  message = "Для просмотра защищённых материалов введите ключ.",
+) {
   return new Promise((resolve) => {
     const existing = document.getElementById("wiki-key-modal");
     if (existing) existing.remove();

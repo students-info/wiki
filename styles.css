@@ -299,13 +299,15 @@ a:visited {
 .right-rail {
   min-width: 0;
 }
-.left-rail-inner,
 .appearance-card {
   position: sticky;
   top: 12px;
   max-height: calc(100vh - 24px);
   overflow: auto;
   scrollbar-width: thin;
+}
+.left-rail-inner {
+  position: static;
 }
 .left-rail {
   padding-top: 58px;
